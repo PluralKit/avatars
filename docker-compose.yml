@@ -1,0 +1,19 @@
+version: '3'
+services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "password"
+  server:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PK_AVATAR_DB: "postgres://postgres:password@db:5432/postgres"
+    volumes:
+      - ./config.toml:/config.toml
+      - db_data:/var/lib/postgresql/data
+volumes:
+  db_data:
