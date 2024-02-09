@@ -143,7 +143,7 @@ async fn pull(
 
 fn load_config() -> anyhow::Result<Config> {
     config::ConfigBuilder::<DefaultState>::default()
-        .add_source(config::File::new("config", FileFormat::Toml))
+        .add_source(config::File::new("config", FileFormat::Toml).required(false))
         .add_source(config::Environment::with_prefix("PK_AVATAR"))
         .build()?
         .try_deserialize::<Config>()
