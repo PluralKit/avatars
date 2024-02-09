@@ -3,8 +3,6 @@ mod hash;
 mod process;
 mod pull;
 mod store;
-use std::sync::Arc;
-
 use crate::db::ImageMeta;
 use crate::pull::Puller;
 use crate::store::Storer;
@@ -19,6 +17,7 @@ use config::builder::DefaultState;
 use config::FileFormat;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::sync::Arc;
 use thiserror::Error;
 use tracing::{error, info};
 

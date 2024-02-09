@@ -5,7 +5,7 @@
 # https://docs.docker.com/go/dockerfile-reference/
 
 ARG RUST_VERSION=1.75.0
-ARG APP_NAME=pk-archiver
+ARG APP_NAME=pluralkit-avatars
 
 ################################################################################
 # xx is a helper for cross-compilation.
