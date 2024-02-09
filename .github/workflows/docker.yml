@@ -49,5 +49,5 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
+          cache-from: type=registry,ref=ghcr.io/pluralkit/avatars:${{ env.BRANCH_NAME }}
           cache-to: type=inline
