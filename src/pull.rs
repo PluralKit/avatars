@@ -105,8 +105,8 @@ pub struct ParsedUrl {
 pub fn parse_url(url: &str) -> anyhow::Result<ParsedUrl> {
     let url = Url::from_str(url).context("invalid url")?;
 
-    match url.domain() {
-        Some("media.discordapp.net" | "cdn.discordapp.com") => {}
+    match (url.scheme(), url.domain()) {
+        ("https", Some("media.discordapp.net" | "cdn.discordapp.com")) => {}
         _ => anyhow::bail!("not a discord cdn url"),
     }
 
