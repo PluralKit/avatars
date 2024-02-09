@@ -216,6 +216,15 @@ impl IntoResponse for PKAvatarError {
             }
             _ => StatusCode::BAD_REQUEST,
         };
+
+        // print inner error if otherwise hidden
+        match self {
+            PKAvatarError::InternalError(ref e) => error!("error: {}", e),
+            PKAvatarError::NetworkError(ref e) => error!("error: {}", e),
+            PKAvatarError::ImageFormatError(ref e) => error!("error: {}", e),
+            _ => error!("error: {}", &self)
+        }
+
         (
             status_code,
             Json(ErrorResponse {
