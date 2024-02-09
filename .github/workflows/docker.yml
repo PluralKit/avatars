@@ -28,6 +28,20 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
           flavor: |
             latest=false
+            
+
+      - name: Build Cache for Docker
+        uses: actions/cache@v3
+        with:
+          path: rust-build-cache
+          key: ${{ runner.os }}-rust-build-cache-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: inject rust-build-cache into docker
+        # v1 was composed of two actions: "inject" and "extract".
+        # v2 is unified to a single action.
+        uses: reproducible-containers/buildkit-cache-dance@v2.1.2
+        with:
+          cache-source: rust-build-cache
 
       - uses: docker/build-push-action@v2
         with:
@@ -35,5 +49,5 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=ghcr.io/pluralkit/avatars:${{ env.BRANCH_NAME }}
-          cache-to: type=inline
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
