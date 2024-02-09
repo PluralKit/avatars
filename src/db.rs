@@ -64,6 +64,7 @@ pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {
         .bind(meta.original_type)
         .bind(meta.original_attachment_id)
         .bind(kind_str)
+        .bind(meta.uploaded_by_account)
         .execute(pool).await?;
     Ok(res.rows_affected() > 0)
 }
