@@ -42,6 +42,7 @@ jobs:
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
           cache-source: rust-build-cache
+          cache-target: /app/target
 
       - uses: docker/build-push-action@v2
         with:
