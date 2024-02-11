@@ -22,7 +22,7 @@ use std::sync::Arc;
 use axum::routing::get;
 use thiserror::Error;
 use tracing::{error, info};
-use crate::db::Stats;
+use crate::db::{ImageMeta, Stats};
 
 #[derive(Error, Debug)]
 pub enum PKAvatarError {
@@ -117,7 +117,6 @@ async fn pull(
         .map_err(|je| PKAvatarError::InternalError(je.into()))??;
 
     let store_res = state.storer.store(&encoded).await?;
-
     let final_url = format!("{}{}", state.config.base_url, store_res.path);
     let is_new = db::add_image(
         &state.pool,
