@@ -71,7 +71,11 @@ fn resize(image: DynamicImage, kind: ImageKind) -> DynamicImage {
     }
 
     // todo: best filter?
-    let resized = image.resize(target_width, target_height, image::imageops::FilterType::Lanczos3);
+    let resized = image.resize(
+        target_width,
+        target_height,
+        image::imageops::FilterType::Lanczos3,
+    );
     return resized;
 }
 
@@ -84,14 +88,20 @@ fn encode(image: DynamicImage) -> ProcessOutput {
 
     let time_before = Instant::now();
     let encoded_lossy = webp::Encoder::new(&*image_buf, webp::PixelLayout::Rgba, width, height)
-        .encode_simple(false, 90.0).expect("encode should be infallible")
+        .encode_simple(false, 90.0)
+        .expect("encode should be infallible")
         .to_vec();
-    let time_after  = Instant::now();
+    let time_after = Instant::now();
 
     let lossy_time = time_after - time_before;
 
     let hash = Hash::sha256(&encoded_lossy);
-    info!("{}: lossy size {}K ({} ms)", hash, encoded_lossy.len()/1024, lossy_time.whole_milliseconds());
+    info!(
+        "{}: lossy size {}K ({} ms)",
+        hash,
+        encoded_lossy.len() / 1024,
+        lossy_time.whole_milliseconds()
+    );
 
     ProcessOutput {
         data_webp: encoded_lossy,

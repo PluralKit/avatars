@@ -1,13 +1,15 @@
 mod db;
 mod hash;
+mod migrate;
 mod process;
 mod pull;
 mod store;
-mod migrate;
 
+use crate::db::{ImageMeta, Stats};
 use crate::pull::Puller;
 use crate::store::Storer;
 use axum::extract::State;
+use axum::routing::get;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -19,10 +21,8 @@ use config::FileFormat;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
-use axum::routing::get;
 use thiserror::Error;
 use tracing::{error, info};
-use crate::db::{ImageMeta, Stats};
 
 #[derive(Error, Debug)]
 pub enum PKAvatarError {
@@ -150,7 +150,11 @@ pub async fn stats(State(state): State<AppState>) -> Result<Json<Stats>, PKAvata
 fn load_config() -> anyhow::Result<Config> {
     config::ConfigBuilder::<DefaultState>::default()
         .add_source(config::File::new("config", FileFormat::Toml).required(false))
-        .add_source(config::Environment::with_prefix("PK_AVATAR").prefix_separator("__").separator("__"))
+        .add_source(
+            config::Environment::with_prefix("PK_AVATAR")
+                .prefix_separator("__")
+                .separator("__"),
+        )
         .build()?
         .try_deserialize::<Config>()
         .map_err(Into::into)
@@ -233,7 +237,7 @@ impl IntoResponse for PKAvatarError {
             PKAvatarError::InternalError(ref e) => error!("error: {}", e),
             PKAvatarError::NetworkError(ref e) => error!("error: {}", e),
             PKAvatarError::ImageFormatError(ref e) => error!("error: {}", e),
-            _ => error!("error: {}", &self)
+            _ => error!("error: {}", &self),
         }
 
         (
@@ -262,7 +266,7 @@ struct Config {
     base_url: String,
 
     #[serde(default)]
-    migrate_worker_count: u32
+    migrate_worker_count: u32,
 }
 
 #[derive(Deserialize, Clone)]
