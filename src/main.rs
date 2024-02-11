@@ -3,7 +3,8 @@ mod hash;
 mod process;
 mod pull;
 mod store;
-use crate::db::ImageMeta;
+mod migrate;
+
 use crate::pull::Puller;
 use crate::store::Storer;
 use axum::extract::State;
@@ -178,6 +179,8 @@ async fn main() -> anyhow::Result<()> {
         config: Arc::new(config),
     };
 
+    migrate::spawn_migrate_workers(Arc::new(state.clone()), state.config.migrate_worker_count);
+
     let app = Router::new().route("/pull", post(pull)).with_state(state);
 
     let host = "0.0.0.0:3000";
@@ -249,6 +252,9 @@ struct Config {
     db: String,
     s3: S3Config,
     base_url: String,
+
+    #[serde(default)]
+    migrate_worker_count: u32
 }
 
 #[derive(Deserialize, Clone)]

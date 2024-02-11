@@ -1,6 +1,6 @@
 use crate::ImageKind;
 use s3::creds::time::OffsetDateTime;
-use sqlx::{Executor, FromRow, PgPool};
+use sqlx::{Executor, FromRow, PgPool, Postgres, Transaction};
 
 #[derive(FromRow)]
 pub struct ImageMeta {
@@ -17,6 +17,13 @@ pub struct ImageMeta {
     pub original_file_size: Option<i32>,
     pub original_type: Option<String>,
     pub uploaded_by_account: Option<i64>,
+}
+
+#[derive(FromRow)]
+pub struct ImageQueueEntry {
+    pub itemid: i32,
+    pub url: String,
+    pub kind: ImageKind,
 }
 
 pub async fn init(pool: &PgPool) -> anyhow::Result<()> {
@@ -45,6 +52,17 @@ pub async fn get_by_attachment_id(
             .fetch_optional(pool)
             .await?,
     )
+}
+
+pub async fn pop_queue(pool: &PgPool) -> anyhow::Result<Option<(Transaction<Postgres>, ImageQueueEntry)>> {
+    let mut tx = pool.begin().await?;
+    let res: Option<ImageQueueEntry> = sqlx::query_as("delete from image_queue where itemid = (select itemid from image_queue order by itemid for update skip locked limit 1) returning *")
+        .fetch_optional(&mut *tx).await?;
+    Ok(res.map(|x| (tx, x)))
+}
+
+pub async fn get_queue_length(pool: &PgPool) -> anyhow::Result<i64> {
+    Ok(sqlx::query_scalar("select count(*) from image_queue").fetch_one(pool).await?)
 }
 
 pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {
