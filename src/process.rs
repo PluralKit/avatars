@@ -6,7 +6,7 @@ use tracing::{debug, error, info, instrument};
 
 use crate::{hash::Hash, ImageKind, PKAvatarError};
 
-const MAX_DIMENSION: u32 = 2000;
+const MAX_DIMENSION: u32 = 3000;
 
 pub struct ProcessOutput {
     pub width: u32,
