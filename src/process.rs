@@ -63,25 +63,26 @@ fn reader_for(data: &[u8]) -> image::io::Reader<Cursor<&[u8]>> {
 
 #[instrument(skip_all)]
 fn resize(image: DynamicImage, kind: ImageKind) -> DynamicImage {
-    let (w, h) = kind.size();
+    let (target_width, target_height) = kind.size();
+    if image.width() <= target_width && image.height() <= target_height {
+        // don't resize if already smaller
+        return image;
+    }
 
     // todo: best filter?
-    let resized = image.resize(w, h, image::imageops::FilterType::Lanczos3);
+    let resized = image.resize(target_width, target_height, image::imageops::FilterType::Lanczos3);
     return resized;
 }
 
 #[instrument(skip_all)]
+// can't believe this is infallible
 fn encode(image: DynamicImage) -> ProcessOutput {
-    // can't believe this is infallible
     let (width, height) = (image.width(), image.height());
 
     let image_buf = image.to_rgba8();
     let encoded = webp::Encoder::new(&*image_buf, webp::PixelLayout::Rgba, width, height)
         .encode(90.0)
         .to_vec();
-
-    // let mut encoded = Vec::new();
-    // JpegEncoder::new_with_quality(&mut encoded, 90).encode_image(&image)?;
 
     let hash = Hash::sha256(&encoded);
     ProcessOutput {
