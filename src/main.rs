@@ -69,7 +69,7 @@ pub enum ImageKind {
 impl ImageKind {
     pub fn size(&self) -> (u32, u32) {
         match self {
-            Self::Avatar => (256, 256),
+            Self::Avatar => (512, 512),
             Self::Banner => (1024, 1024),
         }
     }
