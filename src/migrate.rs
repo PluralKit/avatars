@@ -17,7 +17,7 @@ pub async fn handle_item(state: &AppState) -> anyhow::Result<()> {
             return Ok(());
         };
 
-        if db::get_by_attachment_id(&state.pool, parsed.attachment_id) {
+        if let Some(_) = db::get_by_attachment_id(&state.pool, parsed.attachment_id).await? {
             info!("attachment {} already migrated, skipping", parsed.attachment_id);
             tx.commit().await?;
             return Ok(());
