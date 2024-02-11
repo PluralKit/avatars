@@ -1,5 +1,6 @@
 use crate::ImageKind;
 use s3::creds::time::OffsetDateTime;
+use serde::Serialize;
 use sqlx::{Executor, FromRow, PgPool, Postgres, Transaction};
 
 #[derive(FromRow)]
@@ -17,6 +18,12 @@ pub struct ImageMeta {
     pub original_file_size: Option<i32>,
     pub original_type: Option<String>,
     pub uploaded_by_account: Option<i64>,
+}
+
+#[derive(FromRow, Serialize)]
+pub struct Stats {
+    pub total_images: i64,
+    pub total_file_size: i64
 }
 
 #[derive(FromRow)]
@@ -63,6 +70,10 @@ pub async fn pop_queue(pool: &PgPool) -> anyhow::Result<Option<(Transaction<Post
 
 pub async fn get_queue_length(pool: &PgPool) -> anyhow::Result<i64> {
     Ok(sqlx::query_scalar("select count(*) from image_queue").fetch_one(pool).await?)
+}
+
+pub async fn get_stats(pool: &PgPool) -> anyhow::Result<Stats> {
+    Ok(sqlx::query_as("select count(*) as total_images, sum(file_size) as total_file_size from images").fetch_one(pool).await?)
 }
 
 pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {

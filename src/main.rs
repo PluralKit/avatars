@@ -19,8 +19,10 @@ use config::FileFormat;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
+use axum::routing::get;
 use thiserror::Error;
 use tracing::{error, info};
+use crate::db::Stats;
 
 #[derive(Error, Debug)]
 pub enum PKAvatarError {
@@ -142,6 +144,10 @@ async fn pull(
     }))
 }
 
+pub async fn stats(State(state): State<AppState>) -> Result<Json<Stats>, PKAvatarError> {
+    Ok(Json(db::get_stats(&state.pool).await?))
+}
+
 fn load_config() -> anyhow::Result<Config> {
     config::ConfigBuilder::<DefaultState>::default()
         .add_source(config::File::new("config", FileFormat::Toml).required(false))
@@ -181,7 +187,10 @@ async fn main() -> anyhow::Result<()> {
 
     migrate::spawn_migrate_workers(Arc::new(state.clone()), state.config.migrate_worker_count);
 
-    let app = Router::new().route("/pull", post(pull)).with_state(state);
+    let app = Router::new()
+        .route("/pull", post(pull))
+        .route("/stats", get(stats))
+        .with_state(state);
 
     let host = "0.0.0.0:3000";
     info!("starting server on {}!", host);
