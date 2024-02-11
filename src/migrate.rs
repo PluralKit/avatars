@@ -17,6 +17,12 @@ pub async fn handle_item(state: &AppState) -> anyhow::Result<()> {
             return Ok(());
         };
 
+        if db::get_by_attachment_id(&state.pool, parsed.attachment_id) {
+            info!("attachment {} already migrated, skipping", parsed.attachment_id);
+            tx.commit().await?;
+            return Ok(());
+        }
+
         let pulled = state.puller.pull(&parsed).await?;
         let encoded = process::process(&pulled.data, item.kind)?;
         let store_res = state.storer.store(&encoded).await?;
