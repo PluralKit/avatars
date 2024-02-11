@@ -17,3 +17,5 @@ create table if not exists images
 create index on images (original_url);
 create index on images (original_attachment_id);
 create index on images (uploaded_by_account);
+
+create table if not exists image_queue (itemid serial primary key, url text not null, kind text not null);
