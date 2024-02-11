@@ -1,7 +1,8 @@
 use std::io::Cursor;
 
 use image::{DynamicImage, ImageFormat};
-use tracing::{debug, error, instrument};
+use time::Instant;
+use tracing::{debug, error, info, instrument};
 
 use crate::{hash::Hash, ImageKind, PKAvatarError};
 
@@ -80,13 +81,20 @@ fn encode(image: DynamicImage) -> ProcessOutput {
     let (width, height) = (image.width(), image.height());
 
     let image_buf = image.to_rgba8();
-    let encoded = webp::Encoder::new(&*image_buf, webp::PixelLayout::Rgba, width, height)
-        .encode(90.0)
-        .to_vec();
 
-    let hash = Hash::sha256(&encoded);
+    let time_before = Instant::now();
+    let encoded_lossy = webp::Encoder::new(&*image_buf, webp::PixelLayout::Rgba, width, height)
+        .encode_simple(false, 90.0).expect("encode should be infallible")
+        .to_vec();
+    let time_after  = Instant::now();
+
+    let lossy_time = time_after - time_before;
+
+    let hash = Hash::sha256(&encoded_lossy);
+    info!("{}: lossy size {}K ({} ms)", hash, encoded_lossy.len()/1024, lossy_time.whole_milliseconds());
+
     ProcessOutput {
-        data_webp: encoded,
+        data_webp: encoded_lossy,
         hash,
         width,
         height,
