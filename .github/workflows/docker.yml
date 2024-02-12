@@ -31,21 +31,38 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
           flavor: |
             latest=false
-            
 
-      - name: Build Cache for Docker
+      - name: Build Cache for Docker (target)
         uses: actions/cache@v3
         with:
-          path: rust-build-cache
-          key: ${{ runner.os }}-rust-build-cache-${{ hashFiles('**/Cargo.lock') }}
+          path: rust-build-cache-target
+          key: ${{ runner.os }}-rust-build-cache-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build Cache for Docker (registry)
+        uses: actions/cache@v3
+        with:
+          path: rust-build-cache-registry
+          key: ${{ runner.os }}-rust-build-cache-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build Cache for Docker (git)
+        uses: actions/cache@v3
+        with:
+          path: rust-build-cache-git
+          key: ${{ runner.os }}-rust-build-cache-git-${{ hashFiles('**/Cargo.lock') }}
 
       - name: inject rust-build-cache into docker
-        # v1 was composed of two actions: "inject" and "extract".
-        # v2 is unified to a single action.
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
-          cache-source: rust-build-cache
+          cache-source: rust-build-cache-target
           cache-target: /app/target
+      - name: inject rust-build-cache into docker
+        uses: reproducible-containers/buildkit-cache-dance@v2.1.2
+        with:
+          cache-source: rust-build-cache-registry
+          cache-target: /usr/local/cargo/registry/
+      - name: inject rust-build-cache into docker
+        uses: reproducible-containers/buildkit-cache-dance@v2.1.2
+        with:
+          cache-source: rust-build-cache-git
+          cache-target: /usr/local/cargo/git/db
 
       - uses: docker/build-push-action@v5
         with:
