@@ -7,7 +7,7 @@ use reqwest::{Client, ClientBuilder, StatusCode, Url};
 use time::Instant;
 use tracing::{error, instrument};
 
-const MAX_SIZE: u64 = 4_000_000;
+const MAX_SIZE: u64 = 8 * 1024 * 1024;
 
 pub struct PullResult {
     pub data: Vec<u8>,
