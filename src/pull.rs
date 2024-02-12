@@ -4,6 +4,7 @@ use std::time::Duration;
 use crate::PKAvatarError;
 use anyhow::Context;
 use reqwest::{Client, ClientBuilder, StatusCode, Url};
+use time::Instant;
 use tracing::{error, instrument};
 
 const MAX_SIZE: u64 = 4_000_000;
@@ -30,6 +31,7 @@ impl Puller {
 
     #[instrument(skip_all)]
     pub async fn pull(&self, parsed_url: &ParsedUrl) -> Result<PullResult, PKAvatarError> {
+        let time_before = Instant::now();
         let response = self
             .client
             .get(&parsed_url.full_url)
@@ -39,14 +41,11 @@ impl Puller {
                 error!("network error for {}: {}", parsed_url.full_url, e);
                 PKAvatarError::NetworkError(e)
             })?;
+        let time_after_headers = Instant::now();
+        let status = response.status();
 
-        if response.status() != StatusCode::OK {
-            tracing::warn!("{}: {}", response.status(), &parsed_url.full_url);
-        } else {
-            tracing::info!("{}: {}", response.status(), &parsed_url.full_url);
-        }
-        if response.status() != StatusCode::OK {
-            return Err(PKAvatarError::BadCdnResponse(response.status()));
+        if status != StatusCode::OK {
+            return Err(PKAvatarError::BadCdnResponse(status));
         }
 
         let size = match response.content_length() {
@@ -85,6 +84,17 @@ impl Puller {
                 "server responded with wrong length"
             )));
         }
+        let time_after_body = Instant::now();
+
+        let headers_time = time_after_headers - time_before;
+        let body_time = time_after_body - time_after_headers;
+
+        // can't do dynamic log level lmao
+        if status != StatusCode::OK {
+            tracing::warn!("{}: {} (headers: {}ms, body: {}ms)", status, &parsed_url.full_url, headers_time.whole_milliseconds(), body_time.whole_milliseconds());
+        } else {
+            tracing::info!("{}: {} (headers: {}ms, body: {}ms)", status, &parsed_url.full_url, headers_time.whole_milliseconds(), body_time.whole_milliseconds());
+        };
 
         Ok(PullResult {
             data: body.to_vec(),
