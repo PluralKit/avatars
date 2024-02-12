@@ -42,12 +42,6 @@ jobs:
         with:
           path: rust-build-cache-registry
           key: ${{ runner.os }}-rust-build-cache-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Build Cache for Docker (git)
-        uses: actions/cache@v3
-        with:
-          path: rust-build-cache-git
-          key: ${{ runner.os }}-rust-build-cache-git-${{ hashFiles('**/Cargo.lock') }}
-
       - name: inject rust-build-cache into docker
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
@@ -58,11 +52,6 @@ jobs:
         with:
           cache-source: rust-build-cache-registry
           cache-target: /usr/local/cargo/registry/
-      - name: inject rust-build-cache into docker
-        uses: reproducible-containers/buildkit-cache-dance@v2.1.2
-        with:
-          cache-source: rust-build-cache-git
-          cache-target: /usr/local/cargo/git/db
 
       - uses: docker/build-push-action@v5
         with:
