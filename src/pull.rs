@@ -103,6 +103,7 @@ pub struct ParsedUrl {
 }
 
 pub fn parse_url(url: &str) -> anyhow::Result<ParsedUrl> {
+    // todo: should this return PKAvatarError::InvalidCdnUrl?
     let url = Url::from_str(url).context("invalid url")?;
 
     match (url.scheme(), url.domain()) {

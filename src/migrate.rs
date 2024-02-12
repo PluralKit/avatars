@@ -11,7 +11,7 @@ pub async fn handle_item_inner(
     state: &AppState,
     item: &ImageQueueEntry,
 ) -> Result<(), PKAvatarError> {
-    let parsed = parse_url(&item.url)?;
+    let parsed = parse_url(&item.url).map_err(|_| PKAvatarError::InvalidCdnUrl)?;
 
     if let Some(_) = db::get_by_attachment_id(&state.pool, parsed.attachment_id).await? {
         info!(
