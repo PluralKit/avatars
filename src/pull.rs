@@ -153,6 +153,9 @@ fn trim_url_query(url: &str) -> anyhow::Result<Url> {
             _ => { }
         }
     }
-    parsed.set_query(Some(&qs.finish()));
+
+    let new_query = qs.finish();
+    parsed.set_query(if new_query.len() > 0 { Some(&new_query) } else { None });
+
     Ok(parsed)
 }
