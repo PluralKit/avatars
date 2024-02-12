@@ -1494,6 +1494,7 @@ dependencies = [
  "axum",
  "config",
  "data-encoding",
+ "form_urlencoded",
  "futures",
  "image",
  "reqwest",

@@ -33,9 +33,10 @@ impl Puller {
     #[instrument(skip_all)]
     pub async fn pull(&self, parsed_url: &ParsedUrl) -> Result<PullResult, PKAvatarError> {
         let time_before = Instant::now();
+        let trimmed_url = trim_url_query(&parsed_url.full_url)?;
         let response = self
             .client
-            .get(&parsed_url.full_url)
+            .get(trimmed_url.clone())
             .send()
             .await
             .map_err(|e| {
@@ -92,9 +93,9 @@ impl Puller {
 
         // can't do dynamic log level lmao
         if status != StatusCode::OK {
-            tracing::warn!("{}: {} (headers: {}ms, body: {}ms)", status, &parsed_url.full_url, headers_time.whole_milliseconds(), body_time.whole_milliseconds());
+            tracing::warn!("{}: {} (headers: {}ms, body: {}ms)", status, &trimmed_url, headers_time.whole_milliseconds(), body_time.whole_milliseconds());
         } else {
-            tracing::info!("{}: {} (headers: {}ms, body: {}ms)", status, &parsed_url.full_url, headers_time.whole_milliseconds(), body_time.whole_milliseconds());
+            tracing::info!("{}: {} (headers: {}ms, body: {}ms)", status, &trimmed_url, headers_time.whole_milliseconds(), body_time.whole_milliseconds());
         };
 
         Ok(PullResult {
@@ -140,4 +141,18 @@ pub fn parse_url(url: &str) -> anyhow::Result<ParsedUrl> {
         }
         _ => anyhow::bail!("invaild discord cdn url"),
     }
+}
+
+fn trim_url_query(url: &str) -> anyhow::Result<Url> {
+    let mut parsed = Url::parse(url)?;
+
+    let mut qs = form_urlencoded::Serializer::new(String::new());
+    for (key, value) in parsed.query_pairs() {
+        match key.as_ref() {
+            "ex" | "is" | "hm" => { qs.append_pair(key.as_ref(), value.as_ref()); },
+            _ => { }
+        }
+    }
+    parsed.set_query(Some(&qs.finish()));
+    Ok(parsed)
 }
