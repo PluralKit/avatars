@@ -1,3 +1,4 @@
+use std::error::Error;
 use crate::db::{ImageMeta, ImageQueueEntry};
 use crate::pull::parse_url;
 use crate::{db, process, AppState, PKAvatarError};
@@ -69,7 +70,6 @@ pub async fn handle_item(state: &AppState) -> Result<(), PKAvatarError> {
                 | PKAvatarError::UnknownImageFormat
                 | PKAvatarError::UnsupportedImageFormat(_)
                 | PKAvatarError::ImageFileSizeTooLarge(_, _)
-                | PKAvatarError::ImageFileSizeTooLarge(_, _)
                 | PKAvatarError::InvalidCdnUrl
                 | PKAvatarError::BadCdnResponse(StatusCode::NOT_FOUND | StatusCode::FORBIDDEN)),
             ) => {
@@ -92,7 +92,7 @@ pub async fn worker(worker_id: u32, state: Arc<AppState>) {
         match handle_item(&state).await {
             Ok(()) => {}
             Err(e) => {
-                error!("error in migrate worker {}: {}", worker_id, e);
+                error!("error in migrate worker {}: {}", worker_id, e.source().unwrap_or(&e));
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }
         }

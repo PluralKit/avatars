@@ -5,6 +5,7 @@ mod process;
 mod pull;
 mod store;
 
+use std::error::Error;
 use crate::db::{ImageMeta, Stats};
 use crate::pull::Puller;
 use crate::store::Storer;
@@ -233,12 +234,7 @@ impl IntoResponse for PKAvatarError {
         };
 
         // print inner error if otherwise hidden
-        match self {
-            PKAvatarError::InternalError(ref e) => error!("error: {}", e),
-            PKAvatarError::NetworkError(ref e) => error!("error: {}", e),
-            PKAvatarError::ImageFormatError(ref e) => error!("error: {}", e),
-            _ => error!("error: {}", &self),
-        }
+        error!("error: {}", self.source().unwrap_or(&self));
 
         (
             status_code,
