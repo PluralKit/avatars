@@ -52,7 +52,7 @@ jobs:
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
           cache-source: rust-build-cache-target
-          cache-target: /app/target
+          cache-target: /app/target/
       - name: inject rust-build-cache into docker
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
