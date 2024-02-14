@@ -70,6 +70,7 @@ pub async fn handle_item(state: &AppState) -> Result<(), PKAvatarError> {
                 e @ (PKAvatarError::ImageDimensionsTooLarge(_, _)
                 | PKAvatarError::UnknownImageFormat
                 | PKAvatarError::UnsupportedImageFormat(_)
+                | PKAvatarError::UnsupportedContentType(_)
                 | PKAvatarError::ImageFileSizeTooLarge(_, _)
                 | PKAvatarError::InvalidCdnUrl
                 | PKAvatarError::BadCdnResponse(StatusCode::NOT_FOUND | StatusCode::FORBIDDEN)),
