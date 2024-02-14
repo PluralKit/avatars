@@ -15,6 +15,10 @@ pub struct ProcessOutput {
     pub data_webp: Vec<u8>,
 }
 
+pub async fn process_async(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarError> {
+    tokio::task::spawn_blocking(move || process(data, kind)).await
+        .map_err(|je| PKAvatarError::InternalError(je.into()))?
+}
 #[instrument(skip_all)]
 pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarError> {
     let reader = reader_for(data);

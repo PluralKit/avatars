@@ -22,7 +22,8 @@ pub async fn handle_item_inner(
     }
 
     let pulled = state.puller.pull(&parsed).await?;
-    let encoded = process::process(&pulled.data, item.kind)?;
+
+    let encoded = process::process_async(&pulled.data, item.kind).await?;
     let store_res = state.storer.store(&encoded).await?;
     let final_url = format!("{}{}", state.config.base_url, store_res.path);
 
