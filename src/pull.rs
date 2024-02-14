@@ -24,7 +24,7 @@ impl Puller {
         let client = ClientBuilder::new()
             .connect_timeout(Duration::from_secs(3))
             .timeout(Duration::from_secs(3))
-            .http2_prior_knowledge()
+            .user_agent("PluralKit-Avatars/0.1")
             .build()
             .context("error making client")?;
         Ok(Puller { client })
