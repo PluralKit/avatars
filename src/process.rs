@@ -19,7 +19,7 @@ pub struct ProcessOutput {
 pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarError> {
     let reader = reader_for(data);
     match reader.format() {
-        Some(ImageFormat::Png | ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Jpeg) => {} // ok :)
+        Some(ImageFormat::Png | ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Jpeg | ImageFormat::Tiff) => {} // ok :)
         Some(other) => return Err(PKAvatarError::UnsupportedImageFormat(other)),
         None => return Err(PKAvatarError::UnknownImageFormat),
     }

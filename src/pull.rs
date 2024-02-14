@@ -66,7 +66,7 @@ impl Puller {
             .ok_or(PKAvatarError::MissingHeader("Content-Type"))?
             .to_owned();
         let mime = match content_type.as_str() {
-            mime @ ("image/jpeg" | "image/png" | "image/gif" | "image/webp") => mime,
+            mime @ ("image/jpeg" | "image/png" | "image/gif" | "image/webp" | "image/tiff") => mime,
             _ => return Err(PKAvatarError::UnsupportedContentType(content_type)),
         };
 
