@@ -22,6 +22,7 @@ pub async fn process_async(data: Vec<u8>, kind: ImageKind) -> Result<ProcessOutp
 }
 #[instrument(skip_all)]
 pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarError> {
+    let time_before = Instant::now();
     let reader = reader_for(data);
     match reader.format() {
         Some(ImageFormat::Png | ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Jpeg | ImageFormat::Tiff) => {} // ok :)
@@ -41,13 +42,32 @@ pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarEr
 
     // need to make a new reader??? why can't it just use the same one. reduce duplication?
     let reader = reader_for(data);
+
+    let time_after_parse = Instant::now();
+
     let image = reader.decode().map_err(|e| {
         // print the ugly error, return the nice error
         error!("error decoding image: {}", e);
         PKAvatarError::ImageFormatError(e)
     })?;
+    let time_after_decode = Instant::now();
     let image = resize(image, kind);
+    let time_after_resize = Instant::now();
+
     let encoded = encode(image);
+    let time_after = Instant::now();
+
+    info!(
+        "{}: lossy size {}K (parse: {} ms, decode: {} ms, resize: {} ms, encode: {} ms)",
+        encoded.hash,
+        encoded.data_webp.len() / 1024,
+        (time_after_parse - time_before).whole_milliseconds(),
+        (time_after_decode - time_after_parse).whole_milliseconds(),
+        (time_after_resize - time_after_decode).whole_milliseconds(),
+        (time_after - time_after_resize).whole_milliseconds(),
+    );
+
+
     debug!(
         "processed image {}: {} bytes, {}x{} -> {} bytes, {}x{}",
         encoded.hash,
@@ -88,25 +108,14 @@ fn resize(image: DynamicImage, kind: ImageKind) -> DynamicImage {
 // can't believe this is infallible
 fn encode(image: DynamicImage) -> ProcessOutput {
     let (width, height) = (image.width(), image.height());
-
     let image_buf = image.to_rgba8();
 
-    let time_before = Instant::now();
     let encoded_lossy = webp::Encoder::new(&*image_buf, webp::PixelLayout::Rgba, width, height)
         .encode_simple(false, 90.0)
         .expect("encode should be infallible")
         .to_vec();
-    let time_after = Instant::now();
-
-    let lossy_time = time_after - time_before;
 
     let hash = Hash::sha256(&encoded_lossy);
-    info!(
-        "{}: lossy size {}K ({} ms)",
-        hash,
-        encoded_lossy.len() / 1024,
-        lossy_time.whole_milliseconds()
-    );
 
     ProcessOutput {
         data_webp: encoded_lossy,
