@@ -115,7 +115,7 @@ async fn pull(
     let result = state.puller.pull(&parsed).await?;
 
     let original_file_size = result.data.len();
-    let encoded = process::process_async(&result.data, req.kind).await?;
+    let encoded = process::process_async(result.data, req.kind).await?;
 
     let store_res = state.storer.store(&encoded).await?;
     let final_url = format!("{}{}", state.config.base_url, store_res.path);

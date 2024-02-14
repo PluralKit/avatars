@@ -22,8 +22,9 @@ pub async fn handle_item_inner(
     }
 
     let pulled = state.puller.pull(&parsed).await?;
+    let data_len = pulled.data.len();
 
-    let encoded = process::process_async(&pulled.data, item.kind).await?;
+    let encoded = process::process_async(pulled.data, item.kind).await?;
     let store_res = state.storer.store(&encoded).await?;
     let final_url = format!("{}{}", state.config.base_url, store_res.path);
 
@@ -34,7 +35,7 @@ pub async fn handle_item_inner(
             url: final_url.clone(),
             original_url: Some(parsed.full_url),
             original_type: Some(pulled.content_type),
-            original_file_size: Some(pulled.data.len() as i32),
+            original_file_size: Some(data_len as i32),
             original_attachment_id: Some(parsed.attachment_id as i64),
             file_size: encoded.data_webp.len() as i32,
             width: encoded.width as i32,
@@ -50,7 +51,7 @@ pub async fn handle_item_inner(
     info!(
         "migrated {} ({}k -> {}k)",
         final_url,
-        pulled.data.len(),
+        data_len,
         encoded.data_webp.len()
     );
     Ok(())

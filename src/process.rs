@@ -15,8 +15,9 @@ pub struct ProcessOutput {
     pub data_webp: Vec<u8>,
 }
 
-pub async fn process_async(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarError> {
-    tokio::task::spawn_blocking(move || process(data, kind)).await
+// Moving Vec<u8> in here since the thread needs ownership of it now, it's fine, don't need it after
+pub async fn process_async(data: Vec<u8>, kind: ImageKind) -> Result<ProcessOutput, PKAvatarError> {
+    tokio::task::spawn_blocking(move || process(&data, kind)).await
         .map_err(|je| PKAvatarError::InternalError(je.into()))?
 }
 #[instrument(skip_all)]
