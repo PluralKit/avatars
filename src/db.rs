@@ -2,6 +2,7 @@ use crate::ImageKind;
 use s3::creds::time::OffsetDateTime;
 use serde::Serialize;
 use sqlx::{Executor, FromRow, PgPool, Postgres, Transaction};
+use uuid::Uuid;
 
 #[derive(FromRow)]
 pub struct ImageMeta {
@@ -18,6 +19,7 @@ pub struct ImageMeta {
     pub original_file_size: Option<i32>,
     pub original_type: Option<String>,
     pub uploaded_by_account: Option<i64>,
+    pub uploaded_by_system: Option<Uuid>,
 }
 
 #[derive(FromRow, Serialize)]
@@ -90,7 +92,7 @@ pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {
         ImageKind::Banner => "banner",
     };
 
-    let res = sqlx::query("insert into images (id, url, original_url, file_size, width, height, original_file_size, original_type, original_attachment_id, kind, uploaded_by_account, uploaded_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, (now() at time zone 'utc')) on conflict (id) do nothing")
+    let res = sqlx::query("insert into images (id, url, original_url, file_size, width, height, original_file_size, original_type, original_attachment_id, kind, uploaded_by_account, uploaded_by_system, uploaded_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, (now() at time zone 'utc')) on conflict (id) do nothing")
         .bind(meta.id)
         .bind(meta.url)
         .bind(meta.original_url)
@@ -102,6 +104,7 @@ pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {
         .bind(meta.original_attachment_id)
         .bind(kind_str)
         .bind(meta.uploaded_by_account)
+        .bind(meta.uploaded_by_system)
         .execute(pool).await?;
     Ok(res.rows_affected() > 0)
 }

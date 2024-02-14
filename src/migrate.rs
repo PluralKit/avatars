@@ -41,6 +41,7 @@ pub async fn handle_item_inner(
             kind: item.kind,
             uploaded_at: None,
             uploaded_by_account: None,
+            uploaded_by_system: None,
         },
     )
     .await?;

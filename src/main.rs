@@ -24,6 +24,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use thiserror::Error;
 use tracing::{error, info};
+use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum PKAvatarError {
@@ -83,6 +84,7 @@ pub struct PullRequest {
     url: String,
     kind: ImageKind,
     uploaded_by: Option<u64>, // should be String? serde makes this hard :/
+    system_id: Option<Uuid>,
 
     #[serde(default)]
     force: bool,
@@ -134,6 +136,7 @@ async fn pull(
             kind: req.kind,
             uploaded_at: None,
             uploaded_by_account: req.uploaded_by.map(|x| x as i64),
+            uploaded_by_system: req.system_id,
         },
     )
     .await?;
