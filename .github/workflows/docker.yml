@@ -8,9 +8,6 @@ jobs:
     permissions:
       packages: write
     if: github.repository == 'PluralKit/avatars'
-    strategy:
-      matrix:
-        platform: [amd64, arm64]
     steps:
       - uses: docker/login-action@v1
         with:
@@ -43,8 +40,13 @@ jobs:
       - name: Build Cache for Docker (target)
         uses: actions/cache@v3
         with:
-          path: rust-build-cache-target-${{ matrix.platform }}
-          key: ${{ runner.os }}-rust-build-cache-target-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.platform }}
+          path: rust-build-cache-target-amd64
+          key: ${{ runner.os }}-rust-build-cache-target-${{ hashFiles('**/Cargo.lock') }}-amd64
+      - name: Build Cache for Docker (target)
+        uses: actions/cache@v3
+        with:
+          path: rust-build-cache-target-arm64
+          key: ${{ runner.os }}-rust-build-cache-target-${{ hashFiles('**/Cargo.lock') }}-arm64
       - name: Build Cache for Docker (registry)
         uses: actions/cache@v3
         with:
@@ -53,8 +55,13 @@ jobs:
       - name: inject rust-build-cache into docker
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
-          cache-source: rust-build-cache-target-${{ matrix.platform }}
-          cache-target: /app/target/
+          cache-source: rust-build-cache-target-amd64
+          cache-target: /app/target/linux/amd64
+      - name: inject rust-build-cache into docker
+        uses: reproducible-containers/buildkit-cache-dance@v2.1.2
+        with:
+          cache-source: rust-build-cache-target-arm64
+          cache-target: /app/target/linux/arm64
       - name: inject rust-build-cache into docker
         uses: reproducible-containers/buildkit-cache-dance@v2.1.2
         with:
@@ -66,7 +73,8 @@ jobs:
           # https://github.com/docker/build-push-action/issues/378
           context: .
           platforms: |-
-            linux/${{ matrix.platform }}
+            linux/amd64
+            linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha

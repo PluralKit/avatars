@@ -43,13 +43,13 @@ RUN xx-apk add --no-cache musl-dev gcc
 RUN --mount=type=bind,source=src,target=src \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    --mount=type=cache,target=/app/target/ \
+    --mount=type=cache,target=/app/target/$TARGETPLATFORM \
     --mount=type=cache,target=/usr/local/cargo/git/db \
     --mount=type=cache,target=/usr/local/cargo/registry/ \
     <<EOF
 set -e
-xx-cargo build --locked --release --target-dir ./target
-cp ./target/$(xx-cargo --print-target-triple)/release/$APP_NAME /bin/server
+xx-cargo build --locked --release --target-dir ./target/$TARGETPLATFORM/
+cp ./target/$TARGETPLATFORM/$(xx-cargo --print-target-triple)/release/$APP_NAME /bin/server
 xx-verify /bin/server
 EOF
 
