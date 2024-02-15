@@ -9,7 +9,7 @@ use time::Instant;
 use tokio::sync::Semaphore;
 use tracing::{error, info, instrument, warn};
 
-static PROCESS_SEMAPHORE: Semaphore = Semaphore::const_new(1);
+static PROCESS_SEMAPHORE: Semaphore = Semaphore::const_new(10);
 
 pub async fn handle_item_inner(
     state: &AppState,
