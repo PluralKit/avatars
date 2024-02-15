@@ -77,8 +77,8 @@ pub async fn handle_item_inner(
 }
 
 pub async fn handle_item(state: &AppState) -> Result<(), PKAvatarError> {
-    let queue_length = db::get_queue_length(&state.pool).await?;
-    info!("migrate queue length: {}", queue_length);
+    // let queue_length = db::get_queue_length(&state.pool).await?;
+    // info!("migrate queue length: {}", queue_length);
 
     if let Some((tx, item)) = db::pop_queue(&state.pool).await? {
         match handle_item_inner(state, &item).await {
