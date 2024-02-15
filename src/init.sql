@@ -14,10 +14,11 @@ create table if not exists images
     uploaded_by_account    bigint
 );
 
-create index on images (original_url);
-create index on images (original_attachment_id);
-create index on images (uploaded_by_account);
+create index if not exists images_original_url_idx on images (original_url);
+create index if not exists images_original_attachment_id_idx on images (original_attachment_id);
+create index if not exists images_uploaded_by_account_idx on images (uploaded_by_account);
 
 create table if not exists image_queue (itemid serial primary key, url text not null, kind text not null);
 
 alter table images add column if not exists uploaded_by_system uuid;
+alter table images add column if not exists content_type text default 'image/webp';
