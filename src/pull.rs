@@ -33,7 +33,10 @@ impl Puller {
     #[instrument(skip_all)]
     pub async fn pull(&self, parsed_url: &ParsedUrl) -> Result<PullResult, PKAvatarError> {
         let time_before = Instant::now();
-        let trimmed_url = trim_url_query(&parsed_url.full_url)?;
+        let mut trimmed_url = trim_url_query(&parsed_url.full_url)?;
+        if trimmed_url.host_str() == Some("media.discordapp.net") {
+            trimmed_url.set_host(Some("cdn.discordapp.com")).expect("set_host should not fail");
+        }
         let response = self
             .client
             .get(trimmed_url.clone())
