@@ -22,6 +22,7 @@ use config::FileFormat;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
+use sqlx::postgres::PgPoolOptions;
 use thiserror::Error;
 use tracing::{error, info};
 use uuid::Uuid;
@@ -180,7 +181,7 @@ async fn main() -> anyhow::Result<()> {
     let puller = Arc::new(Puller::new()?);
 
     info!("connecting to database...");
-    let pool = sqlx::PgPool::connect(&config.db).await?;
+    let pool = PgPoolOptions::new().max_connections(config.db_connections.unwrap_or(5)).connect(&config.db).await?;
     db::init(&pool).await?;
 
     let state = AppState {
@@ -259,6 +260,9 @@ where
 #[derive(Deserialize, Clone)]
 struct Config {
     db: String,
+
+    #[serde(default)] // default 5
+    db_connections: Option<u32>,
     s3: S3Config,
     base_url: String,
 
