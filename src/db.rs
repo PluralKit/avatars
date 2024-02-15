@@ -108,3 +108,11 @@ pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {
         .execute(pool).await?;
     Ok(res.rows_affected() > 0)
 }
+
+pub async fn push_queue(conn: &mut sqlx::PgConnection, url: &str, kind: ImageKind) -> anyhow::Result<()> {
+    sqlx::query("insert into image_queue (url, kind) values ($1, $2)")
+        .bind(url)
+        .bind(kind)
+        .execute(conn).await?;
+    Ok(())
+}

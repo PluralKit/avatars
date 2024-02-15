@@ -80,7 +80,7 @@ pub async fn handle_item(state: &AppState) -> Result<(), PKAvatarError> {
     // let queue_length = db::get_queue_length(&state.pool).await?;
     // info!("migrate queue length: {}", queue_length);
 
-    if let Some((tx, item)) = db::pop_queue(&state.pool).await? {
+    if let Some((mut tx, item)) = db::pop_queue(&state.pool).await? {
         match handle_item_inner(state, &item).await {
             Ok(_) => {
                 tx.commit().await.map_err(Into::<anyhow::Error>::into)?;
@@ -99,7 +99,13 @@ pub async fn handle_item(state: &AppState) -> Result<(), PKAvatarError> {
                 warn!("error migrating {}, skipping: {}", item.url, e);
                 tx.commit().await.map_err(Into::<anyhow::Error>::into)?;
                 Ok(())
-            }
+            },
+            Err(e @ PKAvatarError::ImageFormatError(_)) => {
+                // will add this item back to the end of the queue
+                db::push_queue(&mut *tx, &item.url, item.kind).await?;
+                tx.commit().await.map_err(Into::<anyhow::Error>::into)?;
+                Err(e)
+            },
             Err(e) => Err(e),
         }
     } else {
