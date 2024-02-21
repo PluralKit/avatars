@@ -45,11 +45,22 @@ pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarEr
 
     let time_after_parse = Instant::now();
 
-    let image = reader.decode().map_err(|e| {
-        // print the ugly error, return the nice error
-        error!("error decoding image: {}", e);
-        PKAvatarError::ImageFormatError(e)
-    })?;
+    // apparently `image` sometimes decodes webp images wrong/weird.
+    // see: https://discord.com/channels/466707357099884544/667795132971614229/1209925940835262464
+    // instead, for webp, we use libwebp itself to decode, as well.
+    // (pls no cve)
+    let image = if reader.format() == Some(ImageFormat::WebP) {
+        let webp_image = webp::Decoder::new(data).decode()
+            .ok_or_else(|| PKAvatarError::InternalError(anyhow::anyhow!("webp decode failed").into()))?;
+        webp_image.to_image()
+    } else {
+        reader.decode().map_err(|e| {
+            // print the ugly error, return the nice error
+            error!("error decoding image: {}", e);
+            PKAvatarError::ImageFormatError(e)
+        })?
+    };
+
     let time_after_decode = Instant::now();
     let image = resize(image, kind);
     let time_after_resize = Instant::now();
