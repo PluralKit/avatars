@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub struct ImageMeta {
     pub id: String,
     pub kind: ImageKind,
+    pub content_type: String,
     pub url: String,
     pub file_size: i32,
     pub width: i32,
@@ -92,9 +93,10 @@ pub async fn add_image(pool: &PgPool, meta: ImageMeta) -> anyhow::Result<bool> {
         ImageKind::Banner => "banner",
     };
 
-    let res = sqlx::query("insert into images (id, url, original_url, file_size, width, height, original_file_size, original_type, original_attachment_id, kind, uploaded_by_account, uploaded_by_system, uploaded_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, (now() at time zone 'utc')) on conflict (id) do nothing")
+    let res = sqlx::query("insert into images (id, url, content_type, original_url, file_size, width, height, original_file_size, original_type, original_attachment_id, kind, uploaded_by_account, uploaded_by_system, uploaded_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, (now() at time zone 'utc')) on conflict (id) do nothing")
         .bind(meta.id)
         .bind(meta.url)
+        .bind(meta.content_type)
         .bind(meta.original_url)
         .bind(meta.file_size)
         .bind(meta.width)

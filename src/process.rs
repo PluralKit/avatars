@@ -1,5 +1,5 @@
+use std::borrow::Cow;
 use std::io::Cursor;
-
 use image::{DynamicImage, ImageFormat};
 use time::Instant;
 use tracing::{debug, error, info, instrument};
@@ -12,7 +12,30 @@ pub struct ProcessOutput {
     pub width: u32,
     pub height: u32,
     pub hash: Hash,
-    pub data_webp: Vec<u8>,
+    pub format: ProcessedFormat,
+    pub data: Vec<u8>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum ProcessedFormat {
+    Webp,
+    Gif
+}
+
+impl ProcessedFormat {
+    pub fn mime_type(&self) -> &'static str {
+        match self {
+            ProcessedFormat::Gif => "image/gif",
+            ProcessedFormat::Webp => "image/webp"
+        }
+    }
+
+    pub fn extension(&self) -> &'static str {
+        match self {
+            ProcessedFormat::Webp => "webp",
+            ProcessedFormat::Gif => "gif"
+        }
+    }
 }
 
 // Moving Vec<u8> in here since the thread needs ownership of it now, it's fine, don't need it after
@@ -25,20 +48,22 @@ pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarEr
     let time_before = Instant::now();
     let reader = reader_for(data);
     match reader.format() {
-        Some(ImageFormat::Png | ImageFormat::Gif | ImageFormat::WebP | ImageFormat::Jpeg | ImageFormat::Tiff) => {} // ok :)
+        Some(ImageFormat::Png | ImageFormat::WebP | ImageFormat::Jpeg | ImageFormat::Tiff) => {} // ok :)
+        Some(ImageFormat::Gif) => {
+            // animated gifs will need to be handled totally differently
+            // so split off processing here and come back if it's not applicable
+            // (non-banner gifs + 1-frame animated gifs still need to be webp'd)
+            if let Some(output) = process_gif(data, kind)? {
+                return Ok(output);
+            }
+        },
         Some(other) => return Err(PKAvatarError::UnsupportedImageFormat(other)),
         None => return Err(PKAvatarError::UnknownImageFormat),
     }
 
     // want to check dimensions *before* decoding so we don't accidentally end up with a memory bomb
     // eg. a 16000x16000 png file is only 31kb and expands to almost a gig of memory
-    let (width, height) = reader.into_dimensions()?;
-    if width > MAX_DIMENSION || height > MAX_DIMENSION {
-        return Err(PKAvatarError::ImageDimensionsTooLarge(
-            (width, height),
-            (MAX_DIMENSION, MAX_DIMENSION),
-        ));
-    }
+    let (width, height) = assert_dimensions(reader.into_dimensions()?)?;
 
     // need to make a new reader??? why can't it just use the same one. reduce duplication?
     let reader = reader_for(data);
@@ -71,7 +96,7 @@ pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarEr
     info!(
         "{}: lossy size {}K (parse: {} ms, decode: {} ms, resize: {} ms, encode: {} ms)",
         encoded.hash,
-        encoded.data_webp.len() / 1024,
+        encoded.data.len() / 1024,
         (time_after_parse - time_before).whole_milliseconds(),
         (time_after_decode - time_after_parse).whole_milliseconds(),
         (time_after_resize - time_after_decode).whole_milliseconds(),
@@ -85,11 +110,93 @@ pub fn process(data: &[u8], kind: ImageKind) -> Result<ProcessOutput, PKAvatarEr
         data.len(),
         width,
         height,
-        encoded.data_webp.len(),
+        encoded.data.len(),
         encoded.width,
         encoded.height
     );
     Ok(encoded)
+}
+
+fn assert_dimensions((width, height): (u32, u32)) -> Result<(u32, u32), PKAvatarError> {
+    if width > MAX_DIMENSION || height > MAX_DIMENSION {
+        return Err(PKAvatarError::ImageDimensionsTooLarge(
+            (width, height),
+            (MAX_DIMENSION, MAX_DIMENSION),
+        ));
+    }
+    return Ok((width, height))
+}
+fn process_gif(input_data: &[u8], kind: ImageKind) -> Result<Option<ProcessOutput>, PKAvatarError> {
+    // gifs only supported for banners
+    if kind != ImageKind::Banner {
+        return Ok(None);
+    }
+
+    // and we can't rescale gifs (i tried :/) so the max size is the real limit
+    if kind != ImageKind::Banner {
+        return Ok(None);
+    }
+
+    let reader = gif::Decoder::new(Cursor::new(input_data)).map_err(Into::<anyhow::Error>::into)?;
+    let (max_width, max_height) = kind.size();
+    if reader.width() as u32 > max_width || reader.height() as u32 > max_height {
+        return Err(PKAvatarError::ImageDimensionsTooLarge((reader.width() as u32, reader.height() as u32), (max_width, max_height)));
+    }
+    Ok(process_gif_inner(reader).map_err(Into::<anyhow::Error>::into)?)
+}
+
+fn process_gif_inner(mut reader: gif::Decoder<Cursor<&[u8]>>) -> Result<Option<ProcessOutput>, anyhow::Error> {
+    let time_before = Instant::now();
+
+    let (width, height) = (reader.width(), reader.height());
+
+    let mut writer = gif::Encoder::new(Vec::new(), width as u16, height as u16, reader.global_palette().unwrap_or(&[]))?;
+    writer.set_repeat(reader.repeat())?;
+
+    let mut frame_buf = Vec::new();
+
+    let mut frame_count = 0;
+    while let Some(frame) = reader.next_frame_info()? {
+        let mut frame = frame.clone();
+        assert_dimensions((frame.width as u32, frame.height as u32))?;
+        frame_buf.clear();
+        frame_buf.resize(reader.buffer_size(), 0);
+        reader.read_into_buffer(&mut frame_buf)?;
+        frame.buffer = Cow::Borrowed(&frame_buf);
+
+        frame.make_lzw_pre_encoded();
+        writer.write_lzw_pre_encoded_frame(&frame)?;
+        frame_count += 1;
+    }
+
+    if frame_count == 1 {
+        // If there's only one frame, then this doesn't need to be a gif. webp it
+        // (unfortunately we can't tell if there's only one frame until after the first frame's been decoded...)
+        return Ok(None);
+    }
+
+    let data = writer.into_inner()?;
+    let time_after = Instant::now();
+
+    let hash = Hash::sha256(&data);
+
+    let original_data = reader.into_inner();
+    info!(
+        "processed gif {}: {}K -> {}K ({} ms, frames: {})",
+        hash,
+        original_data.buffer().len() / 1024,
+        data.len() / 1024,
+        (time_after - time_before).whole_milliseconds(),
+        frame_count
+    );
+
+    Ok(Some(ProcessOutput {
+        data,
+        format: ProcessedFormat::Gif,
+        hash,
+        width: width as u32,
+        height: height as u32,
+    }))
 }
 
 fn reader_for(data: &[u8]) -> image::io::Reader<Cursor<&[u8]>> {
@@ -129,7 +236,8 @@ fn encode(image: DynamicImage) -> ProcessOutput {
     let hash = Hash::sha256(&encoded_lossy);
 
     ProcessOutput {
-        data_webp: encoded_lossy,
+        data: encoded_lossy,
+        format: ProcessedFormat::Webp,
         hash,
         width,
         height,

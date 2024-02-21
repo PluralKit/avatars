@@ -11,6 +11,7 @@ config = { version = "0.14.0", default-features = false, features = ["toml"] }
 data-encoding = "2.5.0"
 form_urlencoded = "1.2.1"
 futures = "0.3.30"
+gif = "0.13.1"
 image = { version = "0.24.8", default-features = false, features = ["gif", "jpeg", "png", "webp", "tiff"] }
 reqwest = { version = "0.11.24" , default-features = false, features = ["rustls-tls", "trust-dns"]}
 rust-s3 = { version = "0.33.0", default-features = false, features = ["tokio-rustls-tls"] }

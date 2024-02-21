@@ -52,11 +52,12 @@ pub async fn handle_item_inner(
         ImageMeta {
             id: store_res.id,
             url: final_url.clone(),
+            content_type: encoded.format.mime_type().to_string(),
             original_url: Some(parsed.full_url),
             original_type: Some(pulled.content_type),
             original_file_size: Some(data_len as i32),
             original_attachment_id: Some(parsed.attachment_id as i64),
-            file_size: encoded.data_webp.len() as i32,
+            file_size: encoded.data.len() as i32,
             width: encoded.width as i32,
             height: encoded.height as i32,
             kind: item.kind,
@@ -71,7 +72,7 @@ pub async fn handle_item_inner(
         "migrated {} ({}k -> {}k)",
         final_url,
         data_len,
-        encoded.data_webp.len()
+        encoded.data.len()
     );
     Ok(())
 }

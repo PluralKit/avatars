@@ -64,7 +64,7 @@ pub enum PKAvatarError {
     InternalError(#[from] anyhow::Error),
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, sqlx::Type)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, sqlx::Type, PartialEq)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(rename_all = "snake_case", type_name = "text")]
 pub enum ImageKind {
@@ -125,11 +125,12 @@ async fn pull(
         ImageMeta {
             id: store_res.id,
             url: final_url.clone(),
+            content_type: encoded.format.mime_type().to_string(),
             original_url: Some(parsed.full_url),
             original_type: Some(result.content_type),
             original_file_size: Some(original_file_size as i32),
             original_attachment_id: Some(parsed.attachment_id as i64),
-            file_size: encoded.data_webp.len() as i32,
+            file_size: encoded.data.len() as i32,
             width: encoded.width as i32,
             height: encoded.height as i32,
             kind: req.kind,
@@ -164,7 +165,7 @@ fn load_config() -> anyhow::Result<Config> {
 }
 
 #[derive(Clone)]
-struct AppState {
+pub struct AppState {
     storer: Arc<Storer>,
     puller: Arc<Puller>,
     pool: PgPool,

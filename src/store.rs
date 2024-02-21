@@ -35,10 +35,10 @@ impl Storer {
     pub async fn store(&self, res: &ProcessOutput) -> anyhow::Result<StoreResult> {
         // errors here are all going to be internal
         let encoded_hash = res.hash.to_string();
-        let path = format!("images/{}/{}.webp", &encoded_hash[..2], &encoded_hash[2..]);
+        let path = format!("images/{}/{}.{}", &encoded_hash[..2], &encoded_hash[2..], res.format.extension());
         let res = self
             .bucket
-            .put_object_with_content_type(&path, &res.data_webp, "image/webp")
+            .put_object_with_content_type(&path, &res.data, res.format.mime_type())
             .await?;
         if res.status_code() != 200 {
             error!(
